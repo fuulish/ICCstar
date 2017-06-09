@@ -10,7 +10,7 @@ dihedral_style opls
 special_bonds lj/coul 0.0 0.0 0.5
 
 pair_style hybrid lj/cut/coul/long 12.0 12.0
-pair_modify mix geometric tail yes
+pair_modify mix geometric tail no
 kspace_style pppm 1.0e-4
 kspace_modify slab 3.
 
@@ -61,6 +61,10 @@ thermo_style one
 thermo ${nprint}
 
 restart ${nrestart} restart.*.lmp
+
+run ${nsteps}
+
+timestep 5.0
 
 run ${nsteps}
 
