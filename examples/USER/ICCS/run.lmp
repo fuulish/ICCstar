@@ -66,6 +66,7 @@ run ${nsteps}
 
 timestep 5.0
 
+variable nsteps equal 100000
 run ${nsteps}
 
 write_restart restart.*.lmp
