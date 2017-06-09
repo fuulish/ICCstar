@@ -11,7 +11,7 @@ special_bonds lj/coul 0.0 0.0 0.5
 
 pair_style hybrid lj/cut/coul/long 12.0 12.0
 pair_modify mix geometric tail no
-kspace_style pppm 1.0e-4
+kspace_style pppm 1.0e-3
 kspace_modify slab 3.
 
 read_data data.lmp
