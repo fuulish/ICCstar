@@ -47,12 +47,15 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
+#define TWOPI 6.283185307179586
+#define EPS 1.E-06
+
 /* ---------------------------------------------------------------------- */
 
 FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
 {
 
-  if (narg < 9) error->all(FLERR,"Illegal fix ICCS command");
+  if (narg < 10) error->all(FLERR,"Illegal fix ICCS command");
 
   //FUX| need input:
   //      - compute/efield
@@ -69,16 +72,20 @@ FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
   strcpy(id_diel, arg[5]);
 
   n = strlen(arg[6]) + 1;
-  id_srfx = new char[n];
-  strcpy(id_srfx, arg[6]);
+  id_area = new char[n];
+  strcpy(id_area, arg[6]);
 
   n = strlen(arg[7]) + 1;
-  id_srfy = new char[n];
-  strcpy(id_srfy, arg[7]);
+  id_srfx = new char[n];
+  strcpy(id_srfx, arg[7]);
 
   n = strlen(arg[8]) + 1;
+  id_srfy = new char[n];
+  strcpy(id_srfy, arg[8]);
+
+  n = strlen(arg[9]) + 1;
   id_srfz = new char[n];
-  strcpy(id_srfz, arg[8]);
+  strcpy(id_srfz, arg[9]);
 
   //FU| memory-related
   // nvector = 0;
@@ -102,6 +109,7 @@ FixICCS::~FixICCS()
 
   delete [] id_ef;
   delete [] id_diel;
+  delete [] id_area;
   delete [] id_srfx;
   delete [] id_srfy;
   delete [] id_srfz;
@@ -140,6 +148,9 @@ void FixICCS::init()
   index = atom->find_custom(id_diel, flag);
   p_diel = atom->dvector[index];
   
+  index = atom->find_custom(id_area, flag);
+  p_area = atom->dvector[index];
+
   index = atom->find_custom(id_srfx, flag);
   p_srfx = atom->dvector[index];
   
@@ -152,6 +163,8 @@ void FixICCS::init()
   //FUX| create memory for contrast
   int natoms = atom->natoms;
   memory->create(contrast,natoms,"iccs:contrast");
+
+  calculate_contrast();
 
 }
 
@@ -192,6 +205,25 @@ int FixICCS::setmask()
   int mask = 0;
   mask |= PRE_FORCE;
   return mask;
+}
+
+void FixICCS::calculate_contrast()
+{
+  int i;
+  int n = atom->natoms;
+
+  for ( i=0; i<n; i++ ) {
+
+    contrast[i] = bulk_perm / TWOPI * p_area[i];
+
+    if ( p_diel[i] > EPS )
+      contrast[i] = -1.;
+    else
+      contrast[i] = (bulk_perm - p_diel[i]) / (bulk_perm + p_diel[i]);
+
+    // printf("CONTRAST %i %f\n", i, contrast[i]);
+  }
+
 }
 
 // /* ---------------------------------------------------------------------- */

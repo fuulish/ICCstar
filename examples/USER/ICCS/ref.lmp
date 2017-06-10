@@ -14,15 +14,8 @@ pair_modify mix geometric tail no
 kspace_style pppm 1.0e-3
 kspace_modify slab 3.
 
-fix DIEL all property/atom d_diel d_area d_srfx d_srfy d_srfz
+read_data data.ref
 
-#FUX| doing it with an additional read_data did not work that well, I don't know why
-#FUX| maybe check again later
-
-read_data data.lmp fix DIEL NULL Permittivity
-
-# FUX| check if we can get this to run
-# read_data data.extra add merge fix DIEL NULL Permittivity
 # read_restart restart.*.lmp
 
 pair_coeff    1    1   0.820000     3.460000  # CX CX
@@ -58,13 +51,10 @@ timestep 1.0
 velocity MOVING create ${TK} 12345
 velocity MOVING zero linear
 
-compute EFI all efield/atom settings 2 0 12 12
-
 fix SHAKE MOVING shake 0.0001 20 0 b 2 3 a 2
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
-fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
 
-dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz
+dump TRAJ all custom ${ndump} ref.lammpstrj id mol type element x y z ix iy iz
 dump_modify TRAJ element C I B Me P sort 1
 
 thermo_style one

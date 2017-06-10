@@ -58,7 +58,7 @@ class FixICCS : public Fix {
   int kspace_compute_flag;          // 0 if kspace->compute is skipped
 
  private:
-  char *id_ef, *id_diel, *id_srfx, *id_srfy, *id_srfz;
+  char *id_ef, *id_diel, *id_area, *id_srfx, *id_srfy, *id_srfz;
   class Compute *c_ef;
 
   int nvector;
@@ -67,8 +67,10 @@ class FixICCS : public Fix {
   double bzr;
 
   double bulk_perm;
-  double *p_srfx, *p_srfy, *p_srfz, *p_diel;
+  double *p_diel, *p_area, *p_srfx, *p_srfy, *p_srfz;
   double *contrast;
+
+  void calculate_contrast();
 };
 
 }
