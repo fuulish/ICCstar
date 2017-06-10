@@ -52,7 +52,7 @@ using namespace FixConst;
 FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
 {
 
-  if (narg < 8) error->all(FLERR,"Illegal fix ICCS command");
+  if (narg < 9) error->all(FLERR,"Illegal fix ICCS command");
 
   //FUX| need input:
   //      - compute/efield
