@@ -58,10 +58,17 @@ class FixICCS : public Fix {
   int kspace_compute_flag;          // 0 if kspace->compute is skipped
 
  private:
+  char *id_ef, *id_diel, *id_srfx, *id_srfy, *id_srfz;
+  class Compute *c_ef;
+
   int nvector;
   int *peratom;
   double **vectors;
   double bzr;
+
+  double bulk_perm;
+  double *p_srfx, *p_srfy, *p_srfz, *p_diel;
+  double *contrast;
 };
 
 }

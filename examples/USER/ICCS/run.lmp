@@ -9,19 +9,27 @@ angle_style harmonic
 dihedral_style opls
 special_bonds lj/coul 0.0 0.0 0.5
 
-pair_style hybrid lj/cut/coul/long 12.0 12.0
+pair_style lj/cut/coul/long 12.0 12.0
 pair_modify mix geometric tail no
 kspace_style pppm 1.0e-3
 kspace_modify slab 3.
 
-read_data data.lmp
+fix DIEL all property/atom d_diel d_srfx d_srfy d_srfz
+
+#FUX| doing it with an additional read_data did not work that well, I don't know why
+#FUX| maybe check again later
+
+read_data data.lmp fix DIEL NULL Permittivity
+
+# FUX| check if we can get this to run
+# read_data data.extra add merge fix DIEL NULL Permittivity
 # read_restart restart.*.lmp
 
-pair_coeff    1    1 lj/cut/coul/long     0.820000     3.460000  # CX CX
-pair_coeff    2    2 lj/cut/coul/long     0.282027     4.585000  # Im Im
-pair_coeff    3    3 lj/cut/coul/long     0.282027     5.006000  # Bu Bu
-pair_coeff    4    4 lj/cut/coul/long     0.282027     3.290000  # Me Me
-pair_coeff    5    5 lj/cut/coul/long     0.185229     5.152000  # PF6 PF6
+pair_coeff    1    1   0.820000     3.460000  # CX CX
+pair_coeff    2    2   0.282027     4.585000  # Im Im
+pair_coeff    3    3   0.282027     5.006000  # Bu Bu
+pair_coeff    4    4   0.282027     3.290000  # Me Me
+pair_coeff    5    5   0.185229     5.152000  # PF6 PF6
 
 group FROZEN type 1
 group MOVING type 2 3 4 5
@@ -50,9 +58,11 @@ timestep 1.0
 velocity MOVING create ${TK} 12345
 velocity MOVING zero linear
 
-fix SHAKE MOVING shake 0.0001 20 0 b 2 3 a 2
+compute EFI all efield/atom settings 2 0 12 12
 
+fix SHAKE MOVING shake 0.0001 20 0 b 2 3 a 2
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
+fix ICCS FROZEN iccs 1 EFI diel srfx srfy srfz
 
 dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz
 dump_modify TRAJ element C I B Me P sort 1

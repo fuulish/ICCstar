@@ -52,7 +52,33 @@ using namespace FixConst;
 FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
 {
 
-  if (narg < 5) error->all(FLERR,"Illegal fix ICCS command");
+  if (narg < 8) error->all(FLERR,"Illegal fix ICCS command");
+
+  //FUX| need input:
+  //      - compute/efield
+  //      - property names: 1 dielectric 3 components surface normal
+
+  bulk_perm = force->numeric(FLERR,arg[3]);
+
+  int n = strlen(arg[4]) + 1;
+  id_ef = new char[n];
+  strcpy(id_ef,arg[4]);
+
+  n = strlen(arg[5]) + 1;
+  id_diel = new char[n];
+  strcpy(id_diel, arg[5]);
+
+  n = strlen(arg[6]) + 1;
+  id_srfx = new char[n];
+  strcpy(id_srfx, arg[6]);
+
+  n = strlen(arg[7]) + 1;
+  id_srfy = new char[n];
+  strcpy(id_srfy, arg[7]);
+
+  n = strlen(arg[8]) + 1;
+  id_srfz = new char[n];
+  strcpy(id_srfz, arg[8]);
 
   //FU| memory-related
   // nvector = 0;
@@ -74,6 +100,14 @@ FixICCS::~FixICCS()
 
   atom->delete_callback(id,0);
 
+  delete [] id_ef;
+  delete [] id_diel;
+  delete [] id_srfx;
+  delete [] id_srfy;
+  delete [] id_srfz;
+
+  memory->destroy(contrast);
+
   // delete locally stored data
 
   // memory->destroy(peratom);
@@ -86,6 +120,39 @@ FixICCS::~FixICCS()
 
 void FixICCS::init()
 {
+  //FUX| find the fixes and corresponding data that we care about
+  //FUX| surface normals and dielectric contrast
+  //
+  //FUX| useful lines
+  //     index[nvalue] = atom->find_custom(&arg[iarg][2],tmp);
+  //     atom->dvector[index[j]][m] = atof(values[j+1]);
+
+  //FUX| handle if compute id not found
+  int ief = modify->find_compute(id_ef);
+  if (ief < 0)
+    error->all(FLERR,"Compute ID for fix efield/atom does not exist");
+
+  c_ef = modify->compute[ief];
+
+  //FUX| loopify; check if flag is 0/1 for integer/float
+  int index, flag;
+  
+  index = atom->find_custom(id_diel, flag);
+  p_diel = atom->dvector[index];
+  
+  index = atom->find_custom(id_srfx, flag);
+  p_srfx = atom->dvector[index];
+  
+  index = atom->find_custom(id_srfy, flag);
+  p_srfy = atom->dvector[index];
+
+  index = atom->find_custom(id_srfz, flag);
+  p_srfz = atom->dvector[index];
+
+  //FUX| create memory for contrast
+  int natoms = atom->natoms;
+  memory->create(contrast,natoms,"iccs:contrast");
+
 }
 
 void FixICCS::reset_vectors()
