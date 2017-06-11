@@ -48,7 +48,7 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 
 #define TWOPI 6.283185307179586
-#define EPS 1.E-04
+#define EPS 1.E-02
 
 /* ---------------------------------------------------------------------- */
 
@@ -101,6 +101,8 @@ FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
   damp = 0.9;
   conv = EPS;
   niter = 20;
+
+  qinit = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -196,6 +198,10 @@ int FixICCS::modify_param(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix_modify command");
       conv = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
+    } else if (strcmp(arg[iarg],"niter") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix_modify command");
+      niter = force->inumeric(FLERR,arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR,"Illegal fix_modify command");
   }
 
@@ -204,11 +210,15 @@ int FixICCS::modify_param(int narg, char **arg)
 
 void FixICCS::setup_pre_force(int vflag)
 {
-  pre_force(vflag);
+  // initialize_charges();
+  // pre_force(vflag);
 }
 
 void FixICCS::pre_force(int vflag)
 {
+
+  if( !(qinit) )
+    initialize_charges();
 
   reset_vectors();
   run();
@@ -228,6 +238,8 @@ void FixICCS::run()
   //      --> necessary for convergence check
   //      
   //      keep local array with nxt charges qnxt
+  //
+  //FUX| what happens with non-zero charges???
 
   int i;
   int converged = 0;
@@ -242,6 +254,10 @@ void FixICCS::run()
     if( converged )
       break;
   }
+
+  if( !(converged) )
+    error->all(FLERR,"Convergence could not be achieved in maximum number of iterations");
+
 }
 
 //FUX| calculate_charges()
@@ -256,10 +272,35 @@ void FixICCS::calculate_charges_iccs()
 
   double **ef = c_ef->array_atom;
 
+  printf("NEW ITERATION\n");
   for( i=0; i<nlocal; ++i )
-    if( mask[i] & groupbit )
+    if( mask[i] & groupbit ) {
       qnxt[i] = contrast[i] * ( ef[i][0]*p_srfx[i] + ef[i][1]*p_srfy[i] + ef[i][2]*p_srfz[i] );
+      // printf("%g %g %g\n", ef[i][0], ef[i][1], ef[i][2]);
+      // printf("%g %g %g\n", p_srfx[i], p_srfy[i], p_srfz[i]);
+      // printf("INDEX %3i %g\n", i, qnxt[i]);
+    }
 
+}
+
+void FixICCS::initialize_charges()
+{
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+  double *q = atom->q;
+
+  printf("CHARGE INITIALIZATION\n");
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit ) {
+      q[i] = 0.01 * ( (float) rand() / RAND_MAX - 0.5);
+      // printf("%g\n", q[i]);
+    }
+
+  comm->forward_comm_fix(this);
+  force->kspace->qsum_qsq();
+      
+  qinit = 1;
 }
 
 void FixICCS::update_charges()
@@ -275,6 +316,7 @@ void FixICCS::update_charges()
       q[i] = onemdamp * qprv[i] + damp * qnxt[i];
 
   comm->forward_comm_fix(this);
+  force->kspace->qsum_qsq();
 }
 
 int FixICCS::check_convergence()

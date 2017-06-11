@@ -62,7 +62,6 @@ compute EFI all efield/atom settings 2 0 12 12
 
 fix SHAKE MOVING shake 0.0001 20 0 b 1 2 a 1
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
-fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
 
 dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz
 dump_modify TRAJ element C I B Me P sort 1
@@ -75,6 +74,9 @@ restart ${nrestart} restart.*.lmp
 run ${nsteps}
 
 timestep 5.0
+
+fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
+fix_modify ICCS damp 0.1 niter 100
 
 variable nsteps equal 100000
 run ${nsteps}

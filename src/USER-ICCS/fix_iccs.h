@@ -67,6 +67,7 @@ class FixICCS : public Fix {
   double bzr;
   double damp, conv;
   int niter;
+  int qinit;
 
   double bulk_perm;
   double *p_diel, *p_area, *p_srfx, *p_srfy, *p_srfz;
@@ -78,6 +79,7 @@ class FixICCS : public Fix {
   int check_convergence();
   void calculate_charges_iccs();
   void update_charges();
+  void initialize_charges();
 };
 
 }
