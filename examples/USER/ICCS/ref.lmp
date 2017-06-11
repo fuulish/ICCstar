@@ -51,7 +51,7 @@ timestep 1.0
 velocity MOVING create ${TK} 12345
 velocity MOVING zero linear
 
-fix SHAKE MOVING shake 0.0001 20 0 b 2 3 a 2
+fix SHAKE MOVING shake 0.0001 20 0 b 1 2 a 1
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
 
 dump TRAJ all custom ${ndump} ref.lammpstrj id mol type element x y z ix iy iz

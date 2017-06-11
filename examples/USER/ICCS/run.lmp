@@ -60,7 +60,7 @@ velocity MOVING zero linear
 
 compute EFI all efield/atom settings 2 0 12 12
 
-fix SHAKE MOVING shake 0.0001 20 0 b 2 3 a 2
+fix SHAKE MOVING shake 0.0001 20 0 b 1 2 a 1
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
 fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
 

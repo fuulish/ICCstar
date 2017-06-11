@@ -48,7 +48,6 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 
 #define TWOPI 6.283185307179586
-#define EPS 1.E-06
 
 /* ---------------------------------------------------------------------- */
 
@@ -150,7 +149,7 @@ void FixICCS::init()
   
   index = atom->find_custom(id_area, flag);
   p_area = atom->dvector[index];
-
+  
   index = atom->find_custom(id_srfx, flag);
   p_srfx = atom->dvector[index];
   
@@ -216,7 +215,7 @@ void FixICCS::calculate_contrast()
 
     contrast[i] = bulk_perm / TWOPI * p_area[i];
 
-    if ( p_diel[i] > EPS )
+    if ( p_diel[i] < 1 )
       contrast[i] = -1.;
     else
       contrast[i] = (bulk_perm - p_diel[i]) / (bulk_perm + p_diel[i]);
