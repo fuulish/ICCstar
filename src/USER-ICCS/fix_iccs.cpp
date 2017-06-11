@@ -48,6 +48,7 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 
 #define TWOPI 6.283185307179586
+#define EPS 1.E-04
 
 /* ---------------------------------------------------------------------- */
 
@@ -96,6 +97,10 @@ FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
   atom->add_callback(0);
 
   comm_forward = 1;
+
+  damp = 0.9;
+  conv = EPS;
+  niter = 20;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -114,6 +119,9 @@ FixICCS::~FixICCS()
   delete [] id_srfz;
 
   memory->destroy(contrast);
+
+  memory->destroy(qprv);
+  memory->destroy(qnxt);
 
   // delete locally stored data
 
@@ -163,6 +171,9 @@ void FixICCS::init()
   int natoms = atom->natoms;
   memory->create(contrast,natoms,"iccs:contrast");
 
+  memory->create(qprv,natoms,"iccs:qprv");
+  memory->create(qnxt,natoms,"iccs:qnxt");
+
   calculate_contrast();
 
 }
@@ -177,10 +188,13 @@ int FixICCS::modify_param(int narg, char **arg)
 
   int iarg = 0;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"testing") == 0) {
+    if (strcmp(arg[iarg],"damp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix_modify command");
-      // do something here
-      // ...
+      damp = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"conv") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix_modify command");
+      conv = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else error->all(FLERR,"Illegal fix_modify command");
   }
@@ -190,11 +204,14 @@ int FixICCS::modify_param(int narg, char **arg)
 
 void FixICCS::setup_pre_force(int vflag)
 {
-    reset_vectors();
+  pre_force(vflag);
 }
 
 void FixICCS::pre_force(int vflag)
 {
+
+  reset_vectors();
+  run();
   //FUX| do the actual iterations and then forward communicate charges
   comm->forward_comm_fix(this);
 }
@@ -204,6 +221,29 @@ int FixICCS::setmask()
   int mask = 0;
   mask |= PRE_FORCE;
   return mask;
+}
+
+void FixICCS::run()
+{
+  //FUX|  keep local array with initial charges qprv
+  //      --> necessary for convergence check
+  //      
+  //      keep local array with nxt charges qnxt
+
+  int i;
+
+  for( i=0; i<niter; i++ ) {
+    iterate();
+    check_convergence();
+  }
+}
+
+void FixICCS::check_convergence()
+{
+}
+
+void FixICCS::iterate()
+{
 }
 
 void FixICCS::calculate_contrast()

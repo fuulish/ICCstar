@@ -65,12 +65,17 @@ class FixICCS : public Fix {
   int *peratom;
   double **vectors;
   double bzr;
+  double damp, conv;
+  int niter;
 
   double bulk_perm;
   double *p_diel, *p_area, *p_srfx, *p_srfy, *p_srfz;
-  double *contrast;
+  double *contrast, *qprv, *qnxt;
 
   void calculate_contrast();
+  void run();
+  void iterate();
+  void check_convergence();
 };
 
 }
