@@ -213,7 +213,6 @@ void FixICCS::pre_force(int vflag)
   reset_vectors();
   run();
   //FUX| do the actual iterations and then forward communicate charges
-  comm->forward_comm_fix(this);
 }
 
 int FixICCS::setmask()
@@ -231,19 +230,82 @@ void FixICCS::run()
   //      keep local array with nxt charges qnxt
 
   int i;
+  int converged = 0;
 
   for( i=0; i<niter; i++ ) {
+
+    c_ef->compute_peratom();
+
     iterate();
-    check_convergence();
+    converged = check_convergence();
+
+    if( converged )
+      break;
   }
 }
 
-void FixICCS::check_convergence()
+//FUX| calculate_charges()
+//FUX| update_charges()
+
+void FixICCS::calculate_charges_iccs()
 {
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+  double *q = atom->q;
+
+  double **ef = c_ef->array_atom;
+
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit )
+      qnxt[i] = contrast[i] * ( ef[i][0]*p_srfx[i] + ef[i][1]*p_srfy[i] + ef[i][2]*p_srfz[i] );
+
+}
+
+void FixICCS::update_charges()
+{
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+  double *q = atom->q;
+  double onemdamp = 1. - damp;
+
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit )
+      q[i] = onemdamp * qprv[i] + damp * qnxt[i];
+
+  comm->forward_comm_fix(this);
+}
+
+int FixICCS::check_convergence()
+{
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+  double *q = atom->q;
+
+  int isnotconv = 0;
+  int allisnotconv = 0;
+
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit )
+      if( fabs( ( q[i] - qprv[i] ) / qprv[i] ) > conv )
+        isnotconv += 1;
+
+  MPI_Allreduce(&isnotconv,&allisnotconv,1,MPI_INT,MPI_SUM,world);
+
+  if ( allisnotconv )
+    return 0;
+  else
+    return 1;
+
 }
 
 void FixICCS::iterate()
 {
+  //FUX| this could become more complicated if fixes like ASPC/DRUDE SCF calculations get involved
+  calculate_charges_iccs();
+  update_charges();
 }
 
 void FixICCS::calculate_contrast()

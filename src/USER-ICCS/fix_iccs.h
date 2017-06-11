@@ -75,7 +75,9 @@ class FixICCS : public Fix {
   void calculate_contrast();
   void run();
   void iterate();
-  void check_convergence();
+  int check_convergence();
+  void calculate_charges_iccs();
+  void update_charges();
 };
 
 }
