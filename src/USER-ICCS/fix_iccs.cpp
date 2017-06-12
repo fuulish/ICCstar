@@ -268,7 +268,6 @@ void FixICCS::calculate_charges_iccs()
   int i;
   int nlocal = atom->nlocal;
   int *mask = atom->mask;
-  double *q = atom->q;
 
   double **ef = c_ef->array_atom;
 
@@ -360,9 +359,9 @@ void FixICCS::calculate_contrast()
     contrast[i] = bulk_perm / TWOPI * p_area[i];
 
     if ( p_diel[i] < 1 )
-      contrast[i] = -1.;
+      contrast[i] *= -1.;
     else
-      contrast[i] = (bulk_perm - p_diel[i]) / (bulk_perm + p_diel[i]);
+      contrast[i] *= (bulk_perm - p_diel[i]) / (bulk_perm + p_diel[i]);
 
     // printf("CONTRAST %i %f\n", i, contrast[i]);
   }
