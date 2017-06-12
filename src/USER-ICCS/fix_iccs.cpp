@@ -174,8 +174,8 @@ void FixICCS::init()
   int natoms = atom->natoms;
   // memory->create(contrast,natoms,"iccs:contrast");
 
-  memory->create(qprv,natoms,"iccs:qprv");
-  memory->create(qnxt,natoms,"iccs:qnxt");
+  qprv = memory->create(qprv,natoms,"iccs:qprv");
+  qnxt = memory->create(qnxt,natoms,"iccs:qnxt");
 
   calculate_contrast();
 
@@ -245,20 +245,37 @@ void FixICCS::run()
   int i;
   int converged = 0;
 
+
   for( i=0; i<niter; i++ ) {
 
+    backup_charges();
     c_ef->compute_peratom();
 
     iterate();
     converged = check_convergence();
 
-    if( converged )
+    if( converged ) {
+      printf("YIPPIEH\n");
       break;
+    }
   }
 
   if( !(converged) )
     error->all(FLERR,"Convergence could not be achieved in maximum number of iterations");
 
+}
+
+void FixICCS::backup_charges()
+{
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+
+  double *q = atom->q;
+
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit )
+      qprv[i] = q[i];
 }
 
 //FUX| calculate_charges()
@@ -280,7 +297,7 @@ void FixICCS::calculate_charges_iccs()
       qnxt[i] = contrast[i] * ( ef[i][0]*p_srfx[i] + ef[i][1]*p_srfy[i] + ef[i][2]*p_srfz[i] );
       // printf("%g %g %g\n", ef[i][0], ef[i][1], ef[i][2]);
       // printf("%g %g %g\n", p_srfx[i], p_srfy[i], p_srfz[i]);
-      // printf("INDEX %3i %g\n", i, qnxt[i]);
+      // printf("INDEX %3i %g CONTRAST: %g\n", i, qnxt[i], contrast[i]);
     }
 
 }
