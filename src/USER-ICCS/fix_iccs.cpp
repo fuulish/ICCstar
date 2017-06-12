@@ -333,6 +333,8 @@ int FixICCS::check_convergence()
       if( fabs( ( q[i] - qprv[i] ) / qprv[i] ) > conv )
         isnotconv += 1;
 
+  //FUX| substitute MPI_SUM by MPI_MAX? and check for largest charge
+  //FUX| avoids havhing to calculate the sum...
   MPI_Allreduce(&isnotconv,&allisnotconv,1,MPI_INT,MPI_SUM,world);
 
   if ( allisnotconv )
@@ -354,9 +356,11 @@ void FixICCS::calculate_contrast()
   int i;
   int n = atom->natoms;
 
+  double fpieps = 1./0.0030119505336064496;
+
   for ( i=0; i<n; i++ ) {
 
-    contrast[i] = bulk_perm / TWOPI * p_area[i];
+    contrast[i] = bulk_perm / TWOPI * p_area[i] * fpieps;
 
     if ( p_diel[i] < 1 )
       contrast[i] *= -1.;
