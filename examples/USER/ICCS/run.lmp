@@ -58,15 +58,10 @@ timestep 1.0
 velocity MOVING create ${TK} 12345
 velocity MOVING zero linear
 
-compute EFI all efield/atom settings 2 0 12 12
-
-fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
-fix_modify ICCS damp 0.7 niter 1000 conv 0.1
-
 fix SHAKE MOVING shake 0.0001 20 0 b 1 2 a 1
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
 
-dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz
+dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz q
 dump_modify TRAJ element C I B Me P sort 1
 
 thermo_style one
@@ -75,6 +70,11 @@ thermo ${nprint}
 restart ${nrestart} restart.*.lmp
 
 run ${nsteps}
+
+compute EFI all efield/atom settings 2 0 12 12
+
+fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
+fix_modify ICCS damp 1.0 niter 1000 conv 0.1
 
 timestep 5.0
 

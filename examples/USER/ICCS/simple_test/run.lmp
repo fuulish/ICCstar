@@ -21,15 +21,9 @@ pair_coeff    1    1      0.000000     0.000000  # CX CX
 pair_coeff    2    2      0.000000     0.000000  # A A
 pair_coeff    3    3      0.000000     0.000000  # C C
 
-#group FROZEN type 1
-group FROZEN id 1:100
-#group FROZEN id 1:200
-
-group plate1 id 1:100
-group plate2 id 101:200
+group FROZEN type 1
 
 neighbor 2.0 bin
-# neigh_modify exclude group plate1 plate2
 
 timestep 1.0
 
@@ -46,20 +40,54 @@ variable nprint equal ${nsteps}/100
 variable ndump equal ${nsteps}/100
 # variable nrestart equal ${nsteps}/10
 
+variable dipx atom "x*q"
+variable dipy atom "y*q"
+variable dipz atom "z*q"
+
+compute DX all reduce sum v_dipx
+compute DY all reduce sum v_dipy
+compute DZ all reduce sum v_dipz
+
+variable dipxxx equal c_DX
+variable dipyyy equal c_DY
+variable dipzzz equal c_DZ
+
+thermo_style custom step v_dipxxx v_dipyyy v_dipzzz
+#print "final total dipole moment is $dip"
 compute EFI all efield/atom settings 2 0 12 12
 
 fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
-fix_modify ICCS damp 0.9 niter 1000 conv 0.01
+fix_modify ICCS damp 1.0 niter 1000 conv 1.e-6
 
-dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz
-dump_modify TRAJ element C A C
+dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz q
+dump_modify TRAJ element C A C sort 1
 
 thermo_style multi
 thermo ${nprint}
 
-# restart ${nrestart} restart.*.lmp
+thermo_style custom step v_dipxxx v_dipyyy v_dipzzz
 
 run 1
 
-write_restart restart.*.lmp
-write_data data.*.lmp
+# # FUX| fix: when computes are not done above  the first run command, but only included hereafter, then we get nan's
+# # restart ${nrestart} restart.*.lmp
+# 
+# variable dipx atom "q"
+# variable dipy atom "q"
+# variable dipz atom "q"
+# 
+# compute DX all reduce sum v_dipx
+# compute DY all reduce sum v_dipy
+# compute DZ all reduce sum v_dipz
+# 
+# variable dipxxx equal c_DX
+# variable dipyyy equal c_DY
+# variable dipzzz equal c_DZ
+# 
+# thermo_style custom step v_dipxxx v_dipyyy v_dipzzz
+# #print "final total dipole moment is $dip"
+# 
+# run 1
+# 
+# write_restart restart.*.lmp
+# write_data data.*.lmp

@@ -152,6 +152,25 @@ void FixICCS::init()
   c_ef = modify->compute[ief];
 
   //FUX| loopify; check if flag is 0/1 for integer/float
+  reset_vectors();
+
+  //FUX| create memory for contrast
+  int natoms = atom->natoms;
+
+  // memory->create(contrast,natoms+1,"iccs:contrast");
+  // memory->create(qprv,natoms+1,"iccs:qprv");
+  // memory->create(qnxt,natoms+1,"iccs:qnxt");
+
+  contrast = memory->create(contrast,natoms+1,"iccs:contrast");
+  qprv = memory->create(qprv,natoms+1,"iccs:qprv");
+  qnxt = memory->create(qnxt,natoms+1,"iccs:qnxt");
+
+  calculate_contrast();
+
+}
+
+void FixICCS::reset_vectors()
+{
   int index, flag;
   
   index = atom->find_custom(id_diel, flag);
@@ -168,20 +187,6 @@ void FixICCS::init()
 
   index = atom->find_custom(id_srfz, flag);
   p_srfz = atom->dvector[index];
-
-  //FUX| create memory for contrast
-  int natoms = atom->natoms;
-  memory->create(contrast,natoms+1,"iccs:contrast");
-
-  memory->create(qprv,natoms+1,"iccs:qprv");
-  memory->create(qnxt,natoms+1,"iccs:qnxt");
-
-  calculate_contrast();
-
-}
-
-void FixICCS::reset_vectors()
-{
 }
 
 int FixICCS::modify_param(int narg, char **arg)
@@ -210,15 +215,13 @@ int FixICCS::modify_param(int narg, char **arg)
 
 void FixICCS::setup_pre_force(int vflag)
 {
-  // initialize_charges();
-  // pre_force(vflag);
+  reset_vectors();
+  initialize_charges();
+  pre_force(vflag);
 }
 
 void FixICCS::pre_force(int vflag)
 {
-
-  if( !(qinit) )
-    initialize_charges();
 
   reset_vectors();
   run();
@@ -245,6 +248,7 @@ void FixICCS::run()
   int converged = 0;
 
   calculate_contrast();
+
   for( i=0; i<niter; i++ ) {
 
     // post_scf_checks();
@@ -259,12 +263,22 @@ void FixICCS::run()
   if( !(converged) )
     error->all(FLERR,"Convergence could not be achieved in maximum number of iterations");
 
-  if( converged)
-    if( comm->me == 0 )
-      printf("ICC* converged in %i iterations.\n", i);
+  // if( converged)
+  //   if( comm->me == 0 )
+  //     printf("ICC* converged in %i iterations.\n", i);
 
   post_scf_checks();
 
+}
+
+void FixICCS::iterate()
+{
+  backup_charges();
+  c_ef->compute_peratom();
+
+  //FUX| this could become more complicated if fixes like ASPC/DRUDE SCF calculations get involved
+  calculate_charges_iccs();
+  update_charges();
 }
 
 void FixICCS::post_scf_checks()
@@ -287,7 +301,7 @@ void FixICCS::post_scf_checks()
 
   MPI_Allreduce(&qtot, &qtotall, 1, MPI_DOUBLE, MPI_SUM, world);
 
-  printf( "Total ICC* charge is %g\n", qtotall);
+  // printf( "Total ICC* charge is %g\n", qtotall);
 
 }
 
@@ -317,12 +331,8 @@ void FixICCS::calculate_charges_iccs()
 
   // printf("NEW ITERATION\n");
   for( i=0; i<nlocal; ++i )
-    if( mask[i] & groupbit ) {
+    if( mask[i] & groupbit )
       qnxt[i] = contrast[i] * ( ef[i][0]*p_srfx[i] + ef[i][1]*p_srfy[i] + ef[i][2]*p_srfz[i] );
-      // printf("%g %g %g\n", ef[i][0], ef[i][1], ef[i][2]);
-      // printf("%g %g %g\n", p_srfx[i], p_srfy[i], p_srfz[i]);
-      // printf("INDEX %3i %g\n", i, contrast[i]);
-    }
 
 }
 
@@ -333,12 +343,9 @@ void FixICCS::initialize_charges()
   int *mask = atom->mask;
   double *q = atom->q;
 
-  printf("CHARGE INITIALIZATION\n");
   for( i=0; i<nlocal; ++i )
-    if( mask[i] & groupbit ) {
+    if( mask[i] & groupbit )
       q[i] = 0.01 * ( (float) rand() / RAND_MAX - 0.5);
-      // printf("%g\n", q[i]);
-    }
 
   comm->forward_comm_fix(this);
   force->kspace->qsum_qsq();
@@ -388,41 +395,30 @@ int FixICCS::check_convergence()
 
 }
 
-void FixICCS::iterate()
-{
-  backup_charges();
-  c_ef->compute_peratom();
-
-  //FUX| this could become more complicated if fixes like ASPC/DRUDE SCF calculations get involved
-  calculate_charges_iccs();
-  update_charges();
-}
-
 void FixICCS::calculate_contrast()
 {
   int i;
-  int n = atom->natoms;
-
-  // int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
 
   // double fpieps = 0.0030119505336064496;
-  double fpieps = 1./0.0030119505336064496;
+  double fpieps = 0.002997924580;
+  // double fpieps = 1./0.0030119505336064496;
 
   // double fpieps = sqrt( 0.0030119505336064496 );
   // // double fpieps = sqrt( 1./0.0030119505336064496 );
 
-  for ( i=0; i<n; i++ ) {
+  for ( i=0; i<nlocal; i++ )
+    if( mask[i] & groupbit ) {
 
-    contrast[i] = bulk_perm / TWOPI * p_area[i] * fpieps;
+      contrast[i] = bulk_perm / TWOPI * p_area[i] * fpieps;
 
-    if ( p_diel[i] < 1 )
-      contrast[i] *= -1.;
-    else
-      contrast[i] *= (bulk_perm - p_diel[i]) / (bulk_perm + p_diel[i]);
+      if ( p_diel[i] < 1 )
+        contrast[i] *= -1.;
+      else
+        contrast[i] *= (bulk_perm - p_diel[i]) / (bulk_perm + p_diel[i]);
 
-    // if( mask[i] & groupbit )
-    //   printf("CONTRAST %i %g %g %g\n", i, contrast[i], p_area[i], p_diel[i]);
-  }
+    }
 
 }
 
