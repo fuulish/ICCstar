@@ -1,0 +1,65 @@
+# created by fftool
+
+units real
+boundary p p p
+
+atom_style full
+
+fix DIEL all property/atom d_diel d_area d_srfx d_srfy d_srfz
+
+read_data data.lmp fix DIEL NULL Permittivity
+# read_data data.lmp
+# read_restart restart.*.lmp
+
+special_bonds lj/coul 0.0 0.0 0.5
+
+pair_style lj/cut/coul/long 12.0 12.0
+pair_modify mix geometric tail yes
+kspace_style pppm 1.0e-4
+
+pair_coeff    1    1      0.000000     0.000000  # CX CX
+pair_coeff    2    2      0.000000     0.000000  # A A
+pair_coeff    3    3      0.000000     0.000000  # C C
+
+#group FROZEN type 1
+group FROZEN id 1:100
+#group FROZEN id 1:200
+
+group plate1 id 1:100
+group plate2 id 101:200
+
+neighbor 2.0 bin
+# neigh_modify exclude group plate1 plate2
+
+timestep 1.0
+
+variable TK equal 300.0
+variable PBAR equal 1.0
+
+#fix TPSTAT all npt temp ${TK} ${TK} 100 iso ${PBAR} ${PBAR} 500
+
+fix FRZ all setforce 0 0 0
+fix NVE all nve
+
+variable nsteps equal 10000
+variable nprint equal ${nsteps}/100
+variable ndump equal ${nsteps}/100
+# variable nrestart equal ${nsteps}/10
+
+compute EFI all efield/atom settings 2 0 12 12
+
+fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
+fix_modify ICCS damp 0.9 niter 1000 conv 0.01
+
+dump TRAJ all custom ${ndump} dump.lammpstrj id mol type element x y z ix iy iz
+dump_modify TRAJ element C A C
+
+thermo_style multi
+thermo ${nprint}
+
+# restart ${nrestart} restart.*.lmp
+
+run 1
+
+write_restart restart.*.lmp
+write_data data.*.lmp

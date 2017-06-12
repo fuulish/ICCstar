@@ -1,7 +1,7 @@
 # created by fftool
 
 units real
-boundary p p p
+boundary p p f
 
 atom_style full
 bond_style harmonic
@@ -9,10 +9,10 @@ angle_style harmonic
 dihedral_style opls
 special_bonds lj/coul 0.0 0.0 0.5
 
-pair_style lj/cut/coul/long 12.0 12.0
+pair_style lj/cut/coul/long 7.0 7.0
 pair_modify mix geometric tail no
 kspace_style pppm 1.0e-3
-#kspace_modify slab 3.
+kspace_modify slab 3.
 
 fix DIEL all property/atom d_diel d_area d_srfx d_srfy d_srfz
 
@@ -60,9 +60,6 @@ velocity MOVING zero linear
 
 compute EFI all efield/atom settings 2 0 12 12
 
-fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
-fix_modify ICCS damp 0.7 niter 1000 conv 0.1
-
 fix SHAKE MOVING shake 0.0001 20 0 b 1 2 a 1
 fix TVSTAT MOVING nvt temp ${TK} ${TK} 100
 
@@ -77,6 +74,9 @@ restart ${nrestart} restart.*.lmp
 run ${nsteps}
 
 timestep 5.0
+
+fix ICCS FROZEN iccs 1 EFI diel area srfx srfy srfz
+fix_modify ICCS damp 0.9 niter 100
 
 variable nsteps equal 100000
 run ${nsteps}
