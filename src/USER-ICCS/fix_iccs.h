@@ -81,6 +81,8 @@ class FixICCS : public Fix {
   void calculate_charges_iccs();
   void update_charges();
   void initialize_charges();
+
+  void post_scf_checks();
 };
 
 }

@@ -171,10 +171,10 @@ void FixICCS::init()
 
   //FUX| create memory for contrast
   int natoms = atom->natoms;
-  memory->create(contrast,natoms,"iccs:contrast");
+  memory->create(contrast,natoms+1,"iccs:contrast");
 
-  memory->create(qprv,natoms,"iccs:qprv");
-  memory->create(qnxt,natoms,"iccs:qnxt");
+  memory->create(qprv,natoms+1,"iccs:qprv");
+  memory->create(qnxt,natoms+1,"iccs:qnxt");
 
   calculate_contrast();
 
@@ -246,6 +246,8 @@ void FixICCS::run()
 
   for( i=0; i<niter; i++ ) {
 
+    post_scf_checks();
+
     backup_charges();
     c_ef->compute_peratom();
 
@@ -258,6 +260,31 @@ void FixICCS::run()
 
   if( !(converged) )
     error->all(FLERR,"Convergence could not be achieved in maximum number of iterations");
+
+  post_scf_checks();
+
+}
+
+void FixICCS::post_scf_checks()
+{
+  double qtot = 0.0;
+  double qtotall = 0.0;
+
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+
+  double *q = atom->q;
+
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit ) {
+      qtot += q[i];
+      printf("%g\n", q[i]);
+    }
+
+  MPI_Allreduce(&qtot, &qtotall, 1, MPI_DOUBLE, MPI_SUM, world);
+
+  printf( "Total ICC* charge is %g\n", qtotall);
 
 }
 
@@ -291,7 +318,7 @@ void FixICCS::calculate_charges_iccs()
       qnxt[i] = contrast[i] * ( ef[i][0]*p_srfx[i] + ef[i][1]*p_srfy[i] + ef[i][2]*p_srfz[i] );
       // printf("%g %g %g\n", ef[i][0], ef[i][1], ef[i][2]);
       // printf("%g %g %g\n", p_srfx[i], p_srfy[i], p_srfz[i]);
-      // printf("INDEX %3i %g\n", i, qnxt[i]);
+      printf("INDEX %3i %g\n", i, contrast[i]);
     }
 
 }
