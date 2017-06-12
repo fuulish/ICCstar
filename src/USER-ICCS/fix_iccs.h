@@ -39,11 +39,17 @@ class FixICCS : public Fix {
 
   int setmask();
 
-  void add_vector(int);
-  double *request_vector(int);
-
   int pack_forward_comm(int n, int *list, double *buf, int pbc_flag, int *pbc);
   void unpack_forward_comm(int n, int first, double *buf);
+
+  double memory_usage();
+  void grow_arrays(int);
+  void copy_arrays(int, int, int);
+  int pack_exchange(int, double *);
+  int unpack_exchange(int, double *);
+
+  void add_vector(int);
+  double *request_vector(int);
 
  protected:
   int dim;                     // dimensionality of the thing to be aspc'ed
