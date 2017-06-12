@@ -246,6 +246,7 @@ void FixICCS::run()
 
   for( i=0; i<niter; i++ ) {
 
+    backup_charges();
     c_ef->compute_peratom();
 
     iterate();
@@ -258,6 +259,19 @@ void FixICCS::run()
   if( !(converged) )
     error->all(FLERR,"Convergence could not be achieved in maximum number of iterations");
 
+}
+
+void FixICCS::backup_charges()
+{
+  int i;
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+
+  double *q = atom->q;
+
+  for( i=0; i<nlocal; ++i )
+    if( mask[i] & groupbit )
+      qprv[i] = q[i];
 }
 
 //FUX| calculate_charges()

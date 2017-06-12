@@ -77,6 +77,7 @@ class FixICCS : public Fix {
   void run();
   void iterate();
   int check_convergence();
+  void backup_charges();
   void calculate_charges_iccs();
   void update_charges();
   void initialize_charges();
