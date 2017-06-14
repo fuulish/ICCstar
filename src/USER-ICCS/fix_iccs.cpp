@@ -217,7 +217,7 @@ void FixICCS::setup_pre_force(int vflag)
 {
   reset_vectors();
   initialize_charges();
-  pre_force(vflag);
+  // pre_force(vflag);
 }
 
 void FixICCS::pre_force(int vflag)
@@ -401,8 +401,8 @@ void FixICCS::calculate_contrast()
   int nlocal = atom->nlocal;
   int *mask = atom->mask;
 
-  // double fpieps = 0.0030119505336064496;
-  double fpieps = 0.002997924580;
+  double fpieps = 0.0030119505336064496;
+  // double fpieps = 0.002997924580;
   // double fpieps = 1./0.0030119505336064496;
 
   // double fpieps = sqrt( 0.0030119505336064496 );
