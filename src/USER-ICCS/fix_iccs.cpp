@@ -217,7 +217,7 @@ void FixICCS::setup_pre_force(int vflag)
 {
   reset_vectors();
   initialize_charges();
-  // pre_force(vflag);
+  pre_force(vflag);
 }
 
 void FixICCS::pre_force(int vflag)
