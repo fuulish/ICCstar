@@ -401,12 +401,8 @@ void FixICCS::calculate_contrast()
   int nlocal = atom->nlocal;
   int *mask = atom->mask;
 
-  double fpieps = 0.0030119505336064496;
-  // double fpieps = 0.002997924580;
-  // double fpieps = 1./0.0030119505336064496;
-
-  // double fpieps = sqrt( 0.0030119505336064496 );
-  // // double fpieps = sqrt( 1./0.0030119505336064496 );
+  // double fpieps = 0.0030119505336064496;
+  double fpieps = 0.0030114702717118813;
 
   for ( i=0; i<nlocal; i++ )
     if( mask[i] & groupbit ) {
