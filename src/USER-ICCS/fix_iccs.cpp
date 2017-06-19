@@ -88,9 +88,9 @@ FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
   strcpy(id_srfz, arg[9]);
 
   //FU| memory-related
-  // nvector = 0;
-  // peratom = NULL;
-  // vectors = NULL;
+  nvector = 0;
+  peratom = NULL;
+  vectors = NULL;
   // coeffs = NULL;
 
   //FUX| we need to communicate charges, make sure that happens --> see reax/c
@@ -151,9 +151,6 @@ void FixICCS::init()
 
   c_ef = modify->compute[ief];
 
-  //FUX| loopify; check if flag is 0/1 for integer/float
-  reset_vectors();
-
   //FUX| create memory for contrast
   int natoms = atom->natoms;
 
@@ -161,12 +158,16 @@ void FixICCS::init()
   // memory->create(qprv,natoms+1,"iccs:qprv");
   // memory->create(qnxt,natoms+1,"iccs:qnxt");
 
-  contrast = memory->create(contrast,natoms+1,"iccs:contrast");
+  // contrast = memory->create(contrast,natoms+1,"iccs:contrast");
   qprv = memory->create(qprv,natoms+1,"iccs:qprv");
   qnxt = memory->create(qnxt,natoms+1,"iccs:qnxt");
 
-  calculate_contrast();
+  add_vector(1);
+  contrast = request_vector(0);
 
+  //FUX| loopify; check if flag is 0/1 for integer/float
+  reset_vectors();
+  calculate_contrast();
 }
 
 void FixICCS::reset_vectors()
@@ -187,6 +188,8 @@ void FixICCS::reset_vectors()
 
   index = atom->find_custom(id_srfz, flag);
   p_srfz = atom->dvector[index];
+
+  contrast = request_vector(0);
 }
 
 int FixICCS::modify_param(int narg, char **arg)
@@ -247,7 +250,7 @@ void FixICCS::run()
   int i;
   int converged = 0;
 
-  calculate_contrast();
+  // calculate_contrast();
 
   for( i=0; i<niter; i++ ) {
 
@@ -418,22 +421,6 @@ void FixICCS::calculate_contrast()
 
 }
 
-// /* ---------------------------------------------------------------------- */
-// 
-// int FixICCS::pack_reverse_comm(int n, int first, double *buf)
-// {
-//   int i, m;
-//   for(m = 0, i = first; m < n; m++, i++) buf[m] = q[i];
-//   return n;
-// }
-// 
-// /* ---------------------------------------------------------------------- */
-// 
-// void FixICCS::unpack_reverse_comm(int n, int *list, double *buf)
-// {
-//   for(int m = 0; m < n; m++) q[list[m]] += buf[m];
-// }
-
 /* ---------------------------------------------------------------------- */
 
 int FixICCS::pack_forward_comm(int n, int *list, double *buf,
@@ -455,3 +442,101 @@ void FixICCS::unpack_forward_comm(int n, int first, double *buf)
   for(m = 0, i = first; m < n; m++, i++) atom->q[i] = buf[m];
 }
 
+/* ----------------------------------------------------------------------
+   memory usage of local atom-based arrays
+------------------------------------------------------------------------- */
+
+double FixICCS::memory_usage()
+{
+  double bytes = 0.0;
+  for (int m = 0; m < nvector; m++)
+    bytes += atom->nmax*peratom[m]*sizeof(double);
+  return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   allocate local atom-based arrays
+------------------------------------------------------------------------- */
+
+void FixICCS::grow_arrays(int nmax)
+{
+  for (int m = 0; m < nvector; m++)
+    memory->grow(vectors[m],peratom[m]*nmax,"minimize:vector");
+}
+
+/* ----------------------------------------------------------------------
+   copy values within local atom-based arrays
+------------------------------------------------------------------------- */
+
+void FixICCS::copy_arrays(int i, int j, int delflag)
+{
+  int m,iper,nper,ni,nj;
+
+  for (m = 0; m < nvector; m++) {
+    nper = peratom[m];
+    ni = nper*i;
+    nj = nper*j;
+    for (iper = 0; iper < nper; iper++) vectors[m][nj++] = vectors[m][ni++];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   pack values in local atom-based arrays for exchange with another proc
+------------------------------------------------------------------------- */
+
+int FixICCS::pack_exchange(int i, double *buf)
+{
+  int m,iper,nper,ni;
+
+  int n = 0;
+  for (m = 0; m < nvector; m++) {
+    nper = peratom[m];
+    ni = nper*i;
+    for (iper = 0; iper < nper; iper++) buf[n++] = vectors[m][ni++];
+  }
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   unpack values in local atom-based arrays from exchange with another proc
+------------------------------------------------------------------------- */
+
+int FixICCS::unpack_exchange(int nlocal, double *buf)
+{
+  int m,iper,nper,ni;
+
+  int n = 0;
+  for (m = 0; m < nvector; m++) {
+    nper = peratom[m];
+    ni = nper*nlocal;
+    for (iper = 0; iper < nper; iper++) vectors[m][ni++] = buf[n++];
+  }
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   allocate/initialize memory for a new vector with N elements per atom
+------------------------------------------------------------------------- */
+
+void FixICCS::add_vector(int n)
+{
+  memory->grow(peratom,nvector+1,"minimize:peratom");
+  peratom[nvector] = n;
+
+  vectors = (double **)
+    memory->srealloc(vectors,(nvector+1)*sizeof(double *),"minimize:vectors");
+  memory->create(vectors[nvector],atom->nmax*n,"minimize:vector");
+
+  int ntotal = n*atom->nlocal;
+  for (int i = 0; i < ntotal; i++) vectors[nvector][i] = 0.0;
+  nvector++;
+}
+
+/* ----------------------------------------------------------------------
+   return a pointer to the Mth vector
+------------------------------------------------------------------------- */
+
+double *FixICCS::request_vector(int m)
+{
+  return vectors[m];
+}

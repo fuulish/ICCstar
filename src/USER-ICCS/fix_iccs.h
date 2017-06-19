@@ -42,6 +42,12 @@ class FixICCS : public Fix {
   void add_vector(int);
   double *request_vector(int);
 
+  double memory_usage();
+  void grow_arrays(int);
+  void copy_arrays(int, int, int);
+  int pack_exchange(int, double *);
+  int unpack_exchange(int, double *);
+
   int pack_forward_comm(int n, int *list, double *buf, int pbc_flag, int *pbc);
   void unpack_forward_comm(int n, int first, double *buf);
 
