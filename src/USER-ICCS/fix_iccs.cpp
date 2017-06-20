@@ -120,7 +120,11 @@ FixICCS::~FixICCS()
   delete [] id_srfy;
   delete [] id_srfz;
 
-  memory->destroy(contrast);
+  // memory->destroy(contrast);
+
+  memory->destroy(peratom);
+  for (int m = 0; m < nvector; m++) memory->destroy(vectors[m]);
+  memory->sfree(vectors);
 
   memory->destroy(qprv);
   memory->destroy(qnxt);
