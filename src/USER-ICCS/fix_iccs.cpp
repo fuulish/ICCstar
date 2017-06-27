@@ -102,6 +102,8 @@ FixICCS::FixICCS(LAMMPS *lmp, int narg, char **arg) : Fix(lmp,narg,arg)
   conv = EPS;
   niter = 20;
 
+  printconv = 0;
+
   qinit = 0;
 }
 
@@ -214,6 +216,11 @@ int FixICCS::modify_param(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix_modify command");
       niter = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
+    } else if (strcmp(arg[iarg],"printconv") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix_modify command");
+      if (strcmp(arg[iarg+1], "yes") == 0) printconv = 1;
+      else if (strcmp(arg[iarg+1], "no") == 0) printconv = 0;
+      iarg += 2;
     } else error->all(FLERR,"Illegal fix_modify command");
   }
 
@@ -270,9 +277,8 @@ void FixICCS::run()
   if( !(converged) )
     error->all(FLERR,"Convergence could not be achieved in maximum number of iterations");
 
-  // if( converged)
-  //   if( comm->me == 0 )
-  //     printf("ICC* converged in %i iterations.\n", i);
+  if( (printconv) && (comm->me == 0) )
+    printf("ICC* converged in %i iterations.\n", i);
 
   post_scf_checks();
 

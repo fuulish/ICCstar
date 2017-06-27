@@ -66,6 +66,7 @@ class FixICCS : public Fix {
  private:
   char *id_ef, *id_diel, *id_area, *id_srfx, *id_srfy, *id_srfz;
   class Compute *c_ef;
+  int printconv;
 
   int nvector;
   int *peratom;
